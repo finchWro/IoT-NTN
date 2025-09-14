@@ -1,0 +1,126 @@
+:init
+
+
+timeout = 300
+dataloop = 60
+
+; INIT 
+sendln 'ATZ'
+wait '%BOOTEV:0'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+sendln 'AT%IGNSSEV="FIX",1'   
+wait 'OK' 
+; If timeout occurs, go to ":init".
+if result=0 goto init 
+
+sendln 'AT%NOTIFYEV="SIB31",1'  
+wait 'OK'  
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+sendln 'AT+CFUN=0'
+wait 'OK'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+; FIX 
+:fix
+
+
+sendln 'AT+CEREG=2'
+wait 'OK'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+sendln 'AT%IGNSSACT=0'
+waitln 'OK'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+sendln 'AT%IGNSSACT=1'
+waitln 'FIX'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
+
+
+sprintf '{"lat":"%s","lng":"%s"}' groupmatchstr1 groupmatchstr2
+;ASCII to HEX
+
+str = inputstr
+strlen str
+len = result
+hex = ""
+char = ""
+code = 0 
+
+
+i = 1
+while i <= len
+    strcopy str i 1 char
+    str2code code char
+    sprintf '%s%X' hex code
+    hex = inputstr
+    char = ""
+    code = 0 
+    i = i + 1
+endwhile
+
+;ASCII to HEX
+
+
+; CONNECT
+sendln 'AT+CFUN=1'
+wait 'CEREG: 5'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+; SEND
+
+sendln 'AT%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","100.127.69.42",23080,0'
+wait 'OK' 'ERROR'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+sendln 'AT%SOCKETCMD="ACTIVATE",1'
+wait 'OK' 'ERROR'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+strlen hex
+charlen = result / 2
+sprintf 'AT%%SOCKETDATA="SEND",1,%d,"%s"' charlen hex
+
+sendln inputstr
+wait 'OK' 'ERROR'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+;confirmation 
+wait '%SOCKETEV:1,1'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+;do not delete socket  before response
+sendln 'AT%SOCKETCMD="DELETE",1'
+wait 'OK' 'ERROR'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+sendln 'AT+CFUN=0'
+wait 'OK'
+; If timeout occurs, go to ":init".
+if result=0 goto init
+
+pause dataloop
+
+goto fix
+
+
+
