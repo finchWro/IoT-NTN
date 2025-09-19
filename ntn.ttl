@@ -1,9 +1,12 @@
 ;Configuration
-timeout = 300
+timeout = 60
 dataloop = 60
 lastLocationHex = "7b226c6174223a22222c226c6e67223a22227d"
-lastLocationLen = 38
+lastLocationLen = 19
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;initNTN
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 :initNTN
 sendln 'ATZ'
 wait '%BOOTEV:0'
@@ -12,13 +15,13 @@ if result=0 goto initNTN
 
 ;PIN ready
 sendln 'AT+CPIN?'
-wait '+CPIN: READY'  
+wait 'OK'  
 ; If timeout occurs, go to ":initNT".
 if result=0 goto initNTN
 
 ;switch to NTN plan 
 sendln 'AT+CSIM=52,"80C2000015D613190103820282811B0100130799F08900010001"'
-wait '+CSIM: 4'  
+wait 'OK'  
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
 
@@ -95,23 +98,36 @@ if result=0 goto initNTN
 
 goto NTNloop
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; initLTEM
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 :initLTEM
+
+sendln 'ATZ'
+wait '%BOOTEV:0'
+; If timeout occurs, go to ":initLTEM".
+if result=0 goto initNTN
+
 ;switch to NTN plan 
 sendln 'AT+CSIM=52,"80C2000015D613190103820282811B0100130799F05000010001"'
-wait '+CSIM: 4'  
-; If timeout occurs, go to ":initLTEM".
-if result=0 goto initLTEM
-
-;RAT image selection
-sendln 'AT%RATIMGSEL=2'
 wait 'OK'  
 ; If timeout occurs, go to ":initLTEM".
 if result=0 goto initLTEM
 
+;RAT image selection
+sendln 'AT%RATIMGSEL=1'
+wait 'OK'  
+; If timeout occurs, go to ":initLTEM".
+if result=0 goto initLTEM
 
 ;set LTE-M RAT
-
 sendln 'AT%RATACT="CATM",1'
+wait 'OK'  
+; If timeout occurs, go to ":initLTEM".
+if result=0 goto initLTEM
+
+;set band
+sendln 'AT%SETCFG="BAND","20"'
 wait 'OK'  
 ; If timeout occurs, go to ":initLTEM".
 if result=0 goto initLTEM
@@ -163,8 +179,8 @@ if result=0 goto NTNloop
 
 sendln 'AT%IGNSSACT=1'
 waitln 'FIX'
-; If timeout occurs, go to ":LTEloop" (this is fallback technology)
-if result=0 goto LTEloop
+; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+if result=0 goto initLTEM
 
 strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
 
@@ -197,8 +213,8 @@ endwhile
 ; CONNECT
 sendln 'AT+CFUN=1'
 wait 'CEREG: 5'
-; If timeout occurs, go to ":LTEloop" (this is fallback technology)
-if result=0 goto LTEloop
+; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+if result=0 goto initLTEM
 
 ; SEND
 
@@ -251,16 +267,6 @@ goto fix
 :LTEMloop
 
 ; INIT 
-sendln 'ATZ'
-wait '%BOOTEV:0'
-; If timeout occurs, go to ":LTEMloop".
-if result=0 goto LTEMloop
-
-sendln 'AT%NOTIFYEV="SIB31",1'  
-wait 'OK'  
-; If timeout occurs, go to ":LTEMloop".
-if result=0 goto LTEMloop
-
 sendln 'AT+CFUN=0'
 wait 'OK'
 ; If timeout occurs, go to ":LTEMloop".
@@ -268,53 +274,45 @@ if result=0 goto LTEMloop
 
 sendln 'AT+CEREG=2'
 wait 'OK'
-; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
 
 
 ; CONNECT
 sendln 'AT+CFUN=1'
 wait 'CEREG: 5'
 ; If timeout occurs, go to ":LTEloop".
-if result=0 goto LTEloop
+if result=0 goto LTEMloop
 
 ; SEND
 
 sendln 'AT%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","100.127.69.42",23080,0'
 wait 'OK' 'ERROR'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto NLTEloop
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
 
 sendln 'AT%SOCKETCMD="ACTIVATE",1'
 wait 'OK' 'ERROR'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto LTEloop
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
 
-strlen hex
-charlen = result / 2
 sprintf 'AT%%SOCKETDATA="SEND",1,%d,"%s"' lastLocationLen lastLocationHex
 
 sendln inputstr
 wait 'OK' 'ERROR'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto LTEloop
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
 
 ;confirmation 
 wait '%SOCKETEV:1,1'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto NLTEloop
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
 
 ;do not delete socket  before response
 sendln 'AT%SOCKETCMD="DELETE",1'
 wait 'OK' 'ERROR'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto NLTEloop
-
-sendln 'AT+CFUN=0'
-wait 'OK'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto LTEloop
-
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
 
 ; start again with NTN
 goto initNTN
