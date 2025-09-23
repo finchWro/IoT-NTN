@@ -169,10 +169,10 @@ wait 'OK'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
 
-;sendln 'AT%IGNSSACT=0'
-;waitln 'OK'
-; If timeout occurs, go to ":NTNloop".
-;if result=0 goto NTNloop
+sendln 'AT%IGNSSACT=0'
+waitln 'OK'
+;If timeout occurs, go to ":NTNloop".
+if result=0 goto NTNloop
 
 sendln 'AT%IGNSSACT=1'
 waitln 'FIX'
@@ -181,9 +181,23 @@ if result=0 goto initLTEM
 
 strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
 
-sprintf '{"lat":"%s","lng":"%s","type":"NB-IoT-NTN"}' groupmatchstr1 groupmatchstr2
 lastLat = groupmatchstr1
 lastLng = groupmatchstr2
+
+; CONNECT
+sendln 'AT+CFUN=1'
+wait 'CEREG: 5'
+; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+if result=0 goto initLTEM
+
+sendln 'AT%MEAS="8"'
+waitln 'MEAS:'
+; If timeout occurs, go to ":NTNloop".
+if result=0 goto NTNloop
+
+strmatch inputstr 'RSRP = (-?\d+), RSRQ = (-?\d+), SINR = (-?\d+), RSSI = (-?\d+)'
+
+sprintf '{"lat":"%s","lng":"%s","type":"NB-IoT-NTN","RSRP":"%s","RSRQ":"%s","SINR":"%s","RSSI":"%s"}' lastLat lastLng groupmatchstr1 groupmatchstr2 groupmatchstr3 groupmatchstr4
 
 ;ASCII to HEX
 str = inputstr
@@ -207,11 +221,7 @@ endwhile
 ;ASCII to HEX
 
 
-; CONNECT
-sendln 'AT+CFUN=1'
-wait 'CEREG: 5'
-; If timeout occurs, go to ":initLTEM" (this is fallback technology)
-if result=0 goto initLTEM
+
 
 ; SEND
 
@@ -272,6 +282,11 @@ wait 'OK'
 ; If timeout occurs, go to ":LTEMloop".
 if result=0 goto LTEMloop
 
+sendln 'AT%IGNSSACT=0'
+waitln 'OK'
+;If timeout occurs, go to ":NTNloop".
+if result=0 goto LTEMloop
+
 sendln 'AT%IGNSSACT=1'
 waitln 'FIX'
 ; If timeout occurs, go to ":initLTEM" (this is fallback technology)
@@ -283,7 +298,21 @@ lastLat = groupmatchstr1
 lastLng = groupmatchstr2
 
 :LTEMnofix
-sprintf '{"lat":"%s","lng":"%s","type":"LTEM"}' lastLat lastLng
+; CONNECT
+sendln 'AT+CFUN=1'
+wait 'CEREG: 5'
+; If timeout occurs, go to ":LTEloop".
+if result=0 goto LTEMloop
+
+sendln 'AT%MEAS="8"'
+waitln 'MEAS:'
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
+
+strmatch inputstr 'RSRP = (-?\d+), RSRQ = (-?\d+), SINR = (-?\d+), RSSI = (-?\d+)'
+
+sprintf '{"lat":"%s","lng":"%s","type":"LTEM","RSRP":"%s","RSRQ":"%s","SINR":"%s","RSSI":"%s"}' lastLat lastLng groupmatchstr1 groupmatchstr2 groupmatchstr3 groupmatchstr4
+
 ;ASCII to HEX
 str = inputstr
 strlen str
@@ -305,11 +334,6 @@ while i <= len
 endwhile
 ;ASCII to HEX
 
-; CONNECT
-sendln 'AT+CFUN=1'
-wait 'CEREG: 5'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto LTEMloop
 
 ; SEND
 sendln 'AT%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","100.127.69.42",23080,0'
