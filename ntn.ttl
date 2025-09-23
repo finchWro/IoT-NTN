@@ -1,8 +1,8 @@
 ;Configuration
 timeout = 60
 dataloop = 60
-lastLocationHex = "7b226c6174223a22222c226c6e67223a22227d"
-lastLocationLen = 19
+lastLat = ""
+lastLng = ""
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;initNTN
@@ -169,13 +169,10 @@ wait 'OK'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
 
-sendln 'AT%IGNSSACT=0'
-waitln 'OK'
+;sendln 'AT%IGNSSACT=0'
+;waitln 'OK'
 ; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
-
-; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
+;if result=0 goto NTNloop
 
 sendln 'AT%IGNSSACT=1'
 waitln 'FIX'
@@ -184,10 +181,11 @@ if result=0 goto initLTEM
 
 strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
 
+sprintf '{"lat":"%s","lng":"%s","type":"NB-IoT-NTN"}' groupmatchstr1 groupmatchstr2
+lastLat = groupmatchstr1
+lastLng = groupmatchstr2
 
-sprintf '{"lat":"%s","lng":"%s"}' groupmatchstr1 groupmatchstr2
 ;ASCII to HEX
-
 str = inputstr
 strlen str
 len = result
@@ -206,7 +204,6 @@ while i <= len
     code = 0 
     i = i + 1
 endwhile
-
 ;ASCII to HEX
 
 
@@ -231,8 +228,6 @@ if result=0 goto NTNloop
 strlen hex
 charlen = result / 2
 sprintf 'AT%%SOCKETDATA="SEND",1,%d,"%s"' charlen hex
-lastLocationHex = hex
-lastLocationLen = charlen 
 
 sendln inputstr
 wait 'OK' 'ERROR'
@@ -277,6 +272,38 @@ wait 'OK'
 ; If timeout occurs, go to ":LTEMloop".
 if result=0 goto LTEMloop
 
+sendln 'AT%IGNSSACT=1'
+waitln 'FIX'
+; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+if result=0 goto LTEMnofix
+
+strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
+
+lastLat = groupmatchstr1
+lastLng = groupmatchstr2
+
+:LTEMnofix
+sprintf '{"lat":"%s","lng":"%s","type":"LTEM"}' lastLat lastLng
+;ASCII to HEX
+str = inputstr
+strlen str
+len = result
+hex = ""
+char = ""
+code = 0 
+
+
+i = 1
+while i <= len
+    strcopy str i 1 char
+    str2code code char
+    sprintf '%s%X' hex code
+    hex = inputstr
+    char = ""
+    code = 0 
+    i = i + 1
+endwhile
+;ASCII to HEX
 
 ; CONNECT
 sendln 'AT+CFUN=1'
@@ -285,7 +312,6 @@ wait 'CEREG: 5'
 if result=0 goto LTEMloop
 
 ; SEND
-
 sendln 'AT%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","100.127.69.42",23080,0'
 wait 'OK' 'ERROR'
 ; If timeout occurs, go to ":LTEMloop".
@@ -296,7 +322,10 @@ wait 'OK' 'ERROR'
 ; If timeout occurs, go to ":LTEMloop".
 if result=0 goto LTEMloop
 
-sprintf 'AT%%SOCKETDATA="SEND",1,%d,"%s"' lastLocationLen lastLocationHex
+
+strlen hex
+charlen = result / 2
+sprintf 'AT%%SOCKETDATA="SEND",1,%d,"%s"' charlen hex
 
 sendln inputstr
 wait 'OK' 'ERROR'
