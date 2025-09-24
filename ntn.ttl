@@ -1,8 +1,9 @@
 ;Configuration
-timeout = 60
+timeout = 120
 dataloop = 60
 lastLat = ""
 lastLng = ""
+hotGNSS = 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;initNTN
@@ -59,6 +60,12 @@ sendln 'AT%SETACFG="locsrv.operation.locsrv_enable","true"'
 wait 'OK'  
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
+
+sendln 'AT%SETACFG=locsrv.operation.chip_select,alt1250'
+wait 'OK'  
+; If timeout occurs, go to ":initNTN".
+if result=0 goto initNTN
+
 sendln 'AT%SETACFG="locsrv.internal_gnss.auto_restart","enable"'
 wait 'OK'  
 ; If timeout occurs, go to ":initNTN".
@@ -145,46 +152,59 @@ wait '%BOOTEV:0'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
 
-sendln 'AT%IGNSSEV="FIX",1'   
-wait 'OK' 
-; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop 
 
-sendln 'AT%NOTIFYEV="SIB31",1'  
-wait 'OK'  
-; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
+; FIX 
+:fix
 
 sendln 'AT+CFUN=0'
 wait 'OK'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
 
-; FIX 
-:fix
-
-
-sendln 'AT+CEREG=2'
-wait 'OK'
+sendln 'AT%IGNSSEV="FIX",1'   
+wait 'OK' 
 ; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
+if result=0 goto NTNloop 
+
+
+if hotGNSS=1 goto hotGNSSStartNTN
+sendln 'AT%IGNSSACT=1'
+waitln 'FIX'
+; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+if result=0 goto initLTEM
+hotGNSS = 1; 
+goto getLocationNTN
+
+:hotGNSSStartNTN
+sendln 'AT%IGNSSACT=1,2'
+waitln 'FIX'
+; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+if result=0 goto initLTEM
+
+:getLocationNTN
+strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
+
+lastLat = groupmatchstr1
+lastLng = groupmatchstr2
 
 sendln 'AT%IGNSSACT=0'
 waitln 'OK'
 ;If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
 
-sendln 'AT%IGNSSACT=1'
-waitln 'FIX'
-; If timeout occurs, go to ":initLTEM" (this is fallback technology)
-if result=0 goto initLTEM
-
-strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
-
-lastLat = groupmatchstr1
-lastLng = groupmatchstr2
+; FIX
 
 ; CONNECT
+sendln 'AT+CEREG=2'
+wait 'OK'
+; If timeout occurs, go to ":NTNloop".
+if result=0 goto NTNloop
+
+sendln 'AT%NOTIFYEV="SIB31",1'  
+wait 'OK'  
+; If timeout occurs, go to ":NTNloop".
+if result=0 goto NTNloop
+
 sendln 'AT+CFUN=1'
 wait 'CEREG: 5'
 ; If timeout occurs, go to ":initLTEM" (this is fallback technology)
@@ -277,28 +297,40 @@ wait 'OK'
 ; If timeout occurs, go to ":LTEMloop".
 if result=0 goto LTEMloop
 
-sendln 'AT+CEREG=2'
-wait 'OK'
-; If timeout occurs, go to ":LTEMloop".
-if result=0 goto LTEMloop
-
-sendln 'AT%IGNSSACT=0'
-waitln 'OK'
-;If timeout occurs, go to ":NTNloop".
-if result=0 goto LTEMloop
-
+;FIX
+if hotGNSS=1 goto hotGNSSStartLTEM
 sendln 'AT%IGNSSACT=1'
 waitln 'FIX'
-; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+; If timeout occurs, go to ":LTEMnoFix" (this is fallback technology)
+if result=0 goto LTEMnofix
+hotGNSS = 1; 
+goto getLocationLTEM
+
+:hotGNSSStartLTEM
+sendln 'AT%IGNSSACT=1,2'
+waitln 'FIX'
+; If timeout occurs, go to ":iLTEMnofix" (this is fallback technology)
 if result=0 goto LTEMnofix
 
+:getLocationLTEM
 strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
 
 lastLat = groupmatchstr1
 lastLng = groupmatchstr2
 
+sendln 'AT%IGNSSACT=0'
+waitln 'OK'
+;If timeout occurs, go to ":NTNloop".
+if result=0 goto LTEMloop
+;FIX
+
 :LTEMnofix
 ; CONNECT
+sendln 'AT+CEREG=2'
+wait 'OK'
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop
+
 sendln 'AT+CFUN=1'
 wait 'CEREG: 5'
 ; If timeout occurs, go to ":LTEloop".
