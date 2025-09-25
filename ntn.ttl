@@ -1,5 +1,5 @@
 ;Configuration
-timeout = 120
+timeout = 60
 dataloop = 60
 lastLat = "51.143325"
 lastLng = "17.153323"
@@ -162,36 +162,17 @@ wait 'OK'
 if result=0 goto NTNloop
 
 
-strlen lastLat
-
-if result !=0 then
-sprintf 'AT%%NTNCFG="pos","stat","%s","%s","20"' lastLat lastLng
-
-sendln inputstr
-wait 'OK' 
-; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop 
-
-endif
-
-
-
 sendln 'AT%IGNSSEV="FIX",1'   
 wait 'OK' 
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop 
 
+sendln 'AT%IGNSSACT=0'
+waitln 'OK'
+;If timeout occurs, go to ":NTNloop".
+if result=0 goto NTNloop
 
-if hotGNSS=1 goto hotGNSSStartNTN
 sendln 'AT%IGNSSACT=1'
-waitln 'FIX'
-; If timeout occurs, go to ":initLTEM" (this is fallback technology)
-if result=0 goto initLTEM
-hotGNSS = 1; 
-goto getLocationNTN
-
-:hotGNSSStartNTN
-sendln 'AT%IGNSSACT=1,2'
 waitln 'FIX'
 ; If timeout occurs, go to ":initLTEM" (this is fallback technology)
 if result=0 goto initLTEM
@@ -202,10 +183,6 @@ strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
 lastLat = groupmatchstr1
 lastLng = groupmatchstr2
 
-sendln 'AT%IGNSSACT=0'
-waitln 'OK'
-;If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
 
 ; FIX
 
@@ -313,30 +290,24 @@ wait 'OK'
 if result=0 goto LTEMloop
 
 ;FIX
-if hotGNSS=1 goto hotGNSSStartLTEM
-sendln 'AT%IGNSSACT=1'
-waitln 'FIX'
-; If timeout occurs, go to ":LTEMnoFix" (this is fallback technology)
-if result=0 goto LTEMnofix
-hotGNSS = 1; 
-goto getLocationLTEM
-
-:hotGNSSStartLTEM
-sendln 'AT%IGNSSACT=1,2'
-waitln 'FIX'
-; If timeout occurs, go to ":iLTEMnofix" (this is fallback technology)
-if result=0 goto LTEMnofix
-
-:getLocationLTEM
-strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
-
-lastLat = groupmatchstr1
-lastLng = groupmatchstr2
 
 sendln 'AT%IGNSSACT=0'
 waitln 'OK'
 ;If timeout occurs, go to ":NTNloop".
 if result=0 goto LTEMloop
+
+
+sendln 'AT%IGNSSACT=1'
+waitln 'FIX'
+; If timeout occurs, go to ":LTEMnoFix" (this is fallback technology)
+if result=0 goto LTEMnofix
+
+strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
+
+lastLat = groupmatchstr1
+lastLng = groupmatchstr2
+
+
 ;FIX
 
 :LTEMnofix
