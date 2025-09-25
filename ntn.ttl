@@ -1,8 +1,8 @@
 ;Configuration
 timeout = 120
 dataloop = 60
-lastLat = ""
-lastLng = ""
+lastLat = "51.143325"
+lastLng = "17.153323"
 hotGNSS = 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -160,6 +160,21 @@ sendln 'AT+CFUN=0'
 wait 'OK'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
+
+
+strlen lastLat
+
+if result !=0 then
+sprintf 'AT%%NTNCFG="pos","stat","%s","%s","20"' lastLat lastLng
+
+sendln inputstr
+wait 'OK' 
+; If timeout occurs, go to ":NTNloop".
+if result=0 goto NTNloop 
+
+endif
+
+
 
 sendln 'AT%IGNSSEV="FIX",1'   
 wait 'OK' 
