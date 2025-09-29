@@ -1,5 +1,10 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;IoT-NTN script
+;NB-IoT-NTN with LTE-M fallback
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;Configuration
-timeout = 60
+timeout = 120
 dataloop = 60
 lastLat = "51.143325"
 lastLng = "17.153323"
@@ -290,6 +295,10 @@ wait 'OK'
 if result=0 goto LTEMloop
 
 ;FIX
+sendln 'AT%IGNSSEV="FIX",1'   
+wait 'OK' 
+; If timeout occurs, go to ":LTEMloop".
+if result=0 goto LTEMloop 
 
 sendln 'AT%IGNSSACT=0'
 waitln 'OK'
