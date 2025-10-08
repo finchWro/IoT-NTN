@@ -4,20 +4,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;Configuration
+;how log to wait for response
 timeout = 120
+;how long to wait between data sends (in seconds)
 dataloop = 30
+;last known location
 lastLat = "51.143325"
 lastLng = "17.153323"
+;Band configuration
 LTEMBand = "20"
 NTNBand =  "256"
 ;LTEM = 0 OR NBNTN = 1 
 primaryAccess = 1
-;APN = "soracom.io"
-;udpServer = "100.127.69.42"
-;udpPort = "23080"
-APN = "DATA.MONO"
-udpServer = "51.158.1.21"
-udpPort = "5210"
+;APN and server configuration
+APN = "soracom.io"
+udpServer = "100.127.69.42"
+udpPort = "23080"
+;APN = "DATA.MONO"
+;udpServer = "51.158.1.21"
+;udpPort = "5210"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
