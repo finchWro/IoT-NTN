@@ -1,9 +1,96 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;IoT-NTN script
+;LTE-M with NBNTN fallback
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;Configuration
 timeout = 120
-dataloop = 60
+dataloop = 30
 lastLat = "51.143325"
 lastLng = "17.153323"
-hotGNSS = 0
+LTEMBand = "20"
+NTNBand =  "256"
+;LTEM = 0 OR NBNTN = 1 
+primaryAccess = 1
+;APN = "soracom.io"
+;udpServer = "100.127.69.42"
+;udpPort = "23080"
+APN = "DATA.MONO"
+udpServer = "51.158.1.21"
+udpPort = "5210"
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;General configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+:config
+sendln 'ATZ'
+wait '%BOOTEV:0'
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+;PIN ready
+sendln 'AT+CPIN?'
+wait 'OK'  
+; If timeout occurs, go to ":iconfig".
+if result=0 goto config
+
+;reporting to verbose
+sendln 'AT%SETACFG="manager.urcBootEv.enabled","true"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+;external SIM
+sendln 'AT%SETCFG="SIM_INIT_SELECT_POLICY","0"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+sendln 'ATZ'
+wait '%BOOTEV:0'
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+;NTN parameters
+sendln 'AT%SETACFG="radiom.config.multi_rat_enable","true"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+sendln 'AT%SETACFG="radiom.config.preferred_rat_list","none"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+sendln 'AT%SETACFG="radiom.config.auto_preference_mode","none"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+sendln 'AT%SETACFG="locsrv.operation.locsrv_enable","true"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+sendln 'AT%SETACFG=locsrv.operation.chip_select,alt1250'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+sendln 'AT%SETACFG="locsrv.internal_gnss.auto_restart","enable"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+sendln 'AT%SETACFG="modem_apps.Mode.AutoConnectMode","true"'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;primmary access selection 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+if primaryAccess = 0 goto initLTEM
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;initNTN
@@ -14,63 +101,8 @@ wait '%BOOTEV:0'
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
 
-;PIN ready
-sendln 'AT+CPIN?'
-wait 'OK'  
-; If timeout occurs, go to ":initNT".
-if result=0 goto initNTN
-
 ;switch to NTN plan 
 sendln 'AT+CSIM=52,"80C2000015D613190103820282811B0100130799F08900010001"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-;reporting to verbose
-sendln 'AT%SETACFG="manager.urcBootEv.enabled","true"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-;external SIM
-sendln 'AT%SETCFG="SIM_INIT_SELECT_POLICY","0"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-sendln 'ATZ'
-wait '%BOOTEV:0'
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-;NTN parameters
-sendln 'AT%SETACFG="radiom.config.multi_rat_enable","true"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-sendln 'AT%SETACFG="radiom.config.preferred_rat_list","none"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-sendln 'AT%SETACFG="radiom.config.auto_preference_mode","none"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-sendln 'AT%SETACFG="locsrv.operation.locsrv_enable","true"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-sendln 'AT%SETACFG=locsrv.operation.chip_select,alt1250'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-sendln 'AT%SETACFG="locsrv.internal_gnss.auto_restart","enable"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-sendln 'AT%SETACFG="modem_apps.Mode.AutoConnectMode","true"'
 wait 'OK'  
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
@@ -86,22 +118,29 @@ wait 'OK'
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
 
+sprintf 'AT%%SETCFG="BAND","%s"' NTNBand
+
+sendln inputstr
+wait 'OK'  
+; If timeout occurs, go to ":initNTN".
+if result=0 goto initNTN
+
 sendln 'AT+CFUN=0'
 wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
+; If timeout occurs, go to ":config".
+if result=0 goto config
 
+sprintf 'AT%%PDNSET=1,"%s","IP"' APN
+sendln inputstr
 
-sendln 'AT%PDNSET=1,"soracom.io","IP"'
 wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
+; If timeout occurs, go to ":config".
+if result=0 goto config
 
-sendln 'AT%SETCFG="BAND","256"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
+sendln 'ATZ'
+wait '%BOOTEV:0'
+; If timeout occurs, go to ":config".
+if result=0 goto config
 
 goto NTNloop
 
@@ -113,9 +152,9 @@ goto NTNloop
 sendln 'ATZ'
 wait '%BOOTEV:0'
 ; If timeout occurs, go to ":initLTEM".
-if result=0 goto initNTN
+if result=0 goto initLTEM
 
-;switch to NTN plan 
+;switch to LTEM plan 
 sendln 'AT+CSIM=52,"80C2000015D613190103820282811B0100130799F05000010001"'
 wait 'OK'  
 ; If timeout occurs, go to ":initLTEM".
@@ -134,10 +173,30 @@ wait 'OK'
 if result=0 goto initLTEM
 
 ;set band
-sendln 'AT%SETCFG="BAND","20"'
+sprintf 'AT%%SETCFG="BAND","%s"' LTEMBand
+
+sendln inputstr
+
 wait 'OK'  
 ; If timeout occurs, go to ":initLTEM".
 if result=0 goto initLTEM
+
+sendln 'AT+CFUN=0'
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+sprintf 'AT%%PDNSET=1,"%s","IP"' APN
+sendln inputstr
+
+wait 'OK'  
+; If timeout occurs, go to ":config".
+if result=0 goto config
+
+sendln 'ATZ'
+wait '%BOOTEV:0'
+; If timeout occurs, go to ":initLTEM".
+if result=0 goto initNTN
 
 goto LTEMloop
 
@@ -145,16 +204,6 @@ goto LTEMloop
 ;NTNloop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 :NTNloop
-
-; INIT 
-sendln 'ATZ'
-wait '%BOOTEV:0'
-; If timeout occurs, go to ":NTNloop".
-if result=0 goto NTNloop
-
-
-; FIX 
-:fix
 
 sendln 'AT+CFUN=0'
 wait 'OK'
@@ -199,7 +248,7 @@ if result=0 goto NTNloop
 
 sendln 'AT+CFUN=1'
 wait 'CEREG: 5'
-; If timeout occurs, go to ":initLTEM" (this is fallback technology)
+; If timeout occurs, go to try NTN
 if result=0 goto initLTEM
 
 sendln 'AT%MEAS="8"'
@@ -236,8 +285,8 @@ endwhile
 
 
 ; SEND
-
-sendln 'AT%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","100.127.69.42",23080,0'
+sprintf 'AT%%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","%s",%s,0' udpServer udpPort
+sendln inputstr
 wait 'OK' 'ERROR'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
@@ -272,10 +321,16 @@ wait 'OK'
 ; If timeout occurs, go to ":NTNloop".
 if result=0 goto NTNloop
 
-pause dataloop
+    pause dataloop
 
-goto fix
+; start with primary access technology
+if primaryAccess = 0 then
 
+    goto initLTEM
+else 
+
+    goto NTNloop
+endif 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LTEM loop
@@ -303,7 +358,7 @@ if result=0 goto LTEMloop
 
 sendln 'AT%IGNSSACT=1'
 waitln 'FIX'
-; If timeout occurs, go to ":LTEMnoFix" (this is fallback technology)
+; If timeout occurs, go to ":LTEMnoFix" and use last known location
 if result=0 goto LTEMnofix
 
 strmatch inputstr '(\d{1,3}\.\d+)","(\d{1,3}\.\d+)'
@@ -323,8 +378,8 @@ if result=0 goto LTEMloop
 
 sendln 'AT+CFUN=1'
 wait 'CEREG: 5'
-; If timeout occurs, go to ":LTEloop".
-if result=0 goto LTEMloop
+; If timeout occurs, go to NTN".
+if result=0 goto initNTN
 
 sendln 'AT%MEAS="8"'
 waitln 'MEAS:'
@@ -358,7 +413,8 @@ endwhile
 
 
 ; SEND
-sendln 'AT%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","100.127.69.42",23080,0'
+sprintf 'AT%%SOCKETCMD="ALLOCATE",1,"UDP","OPEN","%s",%s,0' udpServer udpPort
+sendln inputstr
 wait 'OK' 'ERROR'
 ; If timeout occurs, go to ":LTEMloop".
 if result=0 goto LTEMloop
@@ -389,6 +445,11 @@ wait 'OK' 'ERROR'
 ; If timeout occurs, go to ":LTEMloop".
 if result=0 goto LTEMloop
 
-; start again with NTN
-goto initNTN
+pause dataloop
+; start with primary access technology
+if primaryAccess = 0 then
+    goto LTEMloop
+else 
+    goto initNTN
+endif 
 

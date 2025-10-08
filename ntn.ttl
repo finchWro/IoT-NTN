@@ -91,18 +91,12 @@ wait 'OK'
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
 
-sendln 'AT+CFUN=0'
+sendln 'AT%SETCFG="BAND","256"'
 wait 'OK'  
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
-
 
 sendln 'AT%PDNSET=1,"soracom.io","IP"'
-wait 'OK'  
-; If timeout occurs, go to ":initNTN".
-if result=0 goto initNTN
-
-sendln 'AT%SETCFG="BAND","256"'
 wait 'OK'  
 ; If timeout occurs, go to ":initNTN".
 if result=0 goto initNTN
